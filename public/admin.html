@@ -405,11 +405,11 @@ function renderProviders() {
         ${isAnthropic ? '<span style="font-size:10px;background:rgba(255,149,0,0.15);color:#ff9500;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700">REAL CLAUDE</span>' : ''}
       </div>
       <div class="provider-model">${p.model}</div>
-      <div class="provider-type">
-        ${p.type}
-        ${p.apiKeySource === 'config' ? '<span style="color:var(--accent2);font-size:11px">🔑 ' + p.apiKeyHint + '</span>'
-          : p.apiKeySource === 'env' ? '<span style="color:var(--warn);font-size:11px">🔑 .env</span>'
-          : p.type !== 'ollama' ? '<span style="color:var(--red);font-size:11px">⚠ No key</span>' : ''}
+      <div class="provider-type" id="ptype-${key}">
+        ${p.type} &nbsp;
+        ${p.apiKeySource === 'config' ? '<span style="color:var(--accent2);font-size:11px">&#128273; ' + p.apiKeyHint + '</span>'
+          : p.apiKeySource === 'env' ? '<span style="color:#f5a623;font-size:11px">&#128273; .env</span>'
+          : p.type !== 'ollama' ? '<span style="color:#ef4444;font-size:11px">&#9888; No key</span>' : ''}
       </div>
       <div class="provider-actions">
         ${!isActive
@@ -716,14 +716,16 @@ function loadKeyStatus() {
     const srcLabel = src === 'config' ? '✓ Saved in Admin UI ' + p.apiKeyHint
                    : src === 'env'    ? '⚠ From .env ' + p.apiKeyHint
                    :                   '✗ Not set';
-    const srcClass = src === 'config' ? 'key-status key-set'
-                   : src === 'env'    ? 'key-status' style="background:rgba(245,166,35,0.15);color:var(--warn)"
-                   :                   'key-status key-missing';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="color:var(--text);font-size:13px;flex:1">${p.label}</span>
-      <span class="${srcClass}">${srcLabel}</span>
-      <button class="btn btn-ghost btn-sm" onclick="openEditProvider('${name}', event)">Set Key</button>
-    </div>`;
+    const srcStyle = src === 'config'
+      ? 'background:rgba(34,197,94,0.15);color:#22c55e'
+      : src === 'env'
+      ? 'background:rgba(245,166,35,0.15);color:#f5a623'
+      : 'background:rgba(239,68,68,0.15);color:#ef4444';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+          + '<span style="color:var(--text);font-size:13px;flex:1">' + p.label + '</span>'
+          + '<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;' + srcStyle + '">' + srcLabel + '</span>'
+          + '<button class="btn btn-ghost btn-sm" onclick="openEditProvider(\'' + name + '\', event)">Set Key</button>'
+          + '</div>';
   }
   list.innerHTML = html || '<div style="color:var(--muted)">No providers configured</div>';
 }
