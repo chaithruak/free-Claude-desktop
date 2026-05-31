@@ -68,10 +68,16 @@ Add API keys for providers you want. At minimum add `NVIDIA_API_KEY`.
 npx tsc
 ```
 
-### 5. Set system env variable (Admin PowerShell — one time only)
+### 5. Set system env variable (Admin PowerShell — one time only, never touch again)
 ```powershell
 [System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", "http://127.0.0.1:8082", "Machine")
 ```
+This is a one-time step that tells Claude Desktop to route all traffic
+through the proxy instead of going directly to Anthropic. You set it once
+and forget it. From this point on, the Admin UI at http://127.0.0.1:8082/admin
+is your only control panel — use it to switch between NVIDIA, Ollama, real
+Claude, or any other provider instantly without touching env vars or
+restarting Claude Desktop again.
 
 ---
 

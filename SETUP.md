@@ -72,10 +72,14 @@ You should see:
 LEAVE THIS WINDOW OPEN. Closing it stops the proxy.
 
 ### Step 6. Point Claude Desktop at the proxy
-Run ONCE in Administrator PowerShell:
+Run ONCE in Administrator PowerShell — never needs to be changed again:
 ```powershell
 [System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", "http://127.0.0.1:8082", "Machine")
 ```
+This is a one-time door that routes Claude Desktop through the proxy.
+After this, use the Admin UI at http://127.0.0.1:8082/admin to switch
+between providers (NVIDIA, Ollama, real Claude, etc.) instantly — no
+env var changes, no Claude Desktop restarts, ever again.
 
 ### Step 7. Restart Claude Desktop
 Quit from the system tray (not just close the window), then reopen.
