@@ -1,31 +1,38 @@
 # Free Claude Desktop — Setup Guide
 
 ## What it does
-Routes Claude Desktop to other LLM providers (NVIDIA, Ollama, OpenAI, Groq, etc.)
-instead of Anthropic, with a browser-based admin panel to switch between them.
+
+Routes Claude Desktop to any LLM provider (NVIDIA, Ollama, OpenAI, Groq, etc.)
+instead of Anthropic, with a browser-based Admin UI to switch between them
+instantly — no restarts, no env var changes, ever.
 
 ```
-Claude Desktop  ->  Local Proxy (127.0.0.1:8082)  ->  Your chosen LLM
+Claude Desktop -> Proxy (127.0.0.1:8082) -> Your chosen LLM
+                          |
+                    Admin UI controls
+                    which LLM is active
 ```
 
 ---
 
-## Prerequisites
+## Requirements
 
-Check Node.js is installed (need 18+):
+- Windows 10/11
+- Node.js 18+ — download from https://nodejs.org (install with defaults)
+- Claude Desktop installed
+- API key for at least one provider (NVIDIA recommended to start)
 
+Check Node.js is installed:
 ```powershell
 node --version
 ```
-
-If missing, install from https://nodejs.org with default options.
 
 ---
 
 ## Part 1 — One-Time Setup
 
 ### Step 1. Extract the project
-Extract this project to `C:\free-claude-desktop`
+Extract this zip to `C:\free-claude-desktop`
 
 ### Step 2. Install dependencies
 ```powershell
@@ -33,168 +40,181 @@ cd C:\free-claude-desktop
 npm install
 ```
 
-### Step 3. Add your API key
+### Step 3. Add your API keys
 ```powershell
 copy .env.example .env
 notepad .env
 ```
-Add your NVIDIA key (and any others you have), save, close:
+
+Add your keys, save and close. At minimum add NVIDIA. Also add ANTHROPIC_API_KEY
+if you want to switch back to real Claude from the Admin UI without any extra steps:
 ```
-NVIDIA_API_KEY=nvapi-your-key-here
+ANTHROPIC_API_KEY=your-key-from-console.anthropic.com
+NVIDIA_API_KEY=nvapi-your-key-from-build.nvidia.com
 ```
 
-### Step 4. Build
+### Step 4. Build the project
 ```powershell
 npx tsc
 ```
+
 Confirm it worked:
 ```powershell
 ls dist\index.js
 ```
 
----
-
-## Part 2 — Daily Usage
-
-### Step 5. Start the proxy
-```powershell
-cd C:\free-claude-desktop
-node dist\index.js
-```
-You should see:
-```
-==============================================
-  Free Claude Desktop
-  Proxy  : http://127.0.0.1:8082/v1/messages
-  Admin  : http://127.0.0.1:8082/admin
-==============================================
-```
-LEAVE THIS WINDOW OPEN. Closing it stops the proxy.
-
-### Step 6. Point Claude Desktop at the proxy
-Run ONCE in Administrator PowerShell — never needs to be changed again:
+### Step 5. Route Claude Desktop through the proxy
+Run in Administrator PowerShell — ONE TIME ONLY, never needs to change again:
 ```powershell
 [System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", "http://127.0.0.1:8082", "Machine")
 ```
-This is a one-time door that routes Claude Desktop through the proxy.
-After this, use the Admin UI at http://127.0.0.1:8082/admin to switch
-between providers (NVIDIA, Ollama, real Claude, etc.) instantly — no
-env var changes, no Claude Desktop restarts, ever again.
+
+This is a one-time door. It tells Claude Desktop to send all traffic through
+the proxy. You set it once and forget it exists. From this point on, the
+Admin UI at http://127.0.0.1:8082/admin is your only control panel.
+
+### Step 6. Install the auto-start service
+Run in Administrator PowerShell — ONE TIME ONLY:
+```powershell
+cd C:\free-claude-desktop
+.\install-service.ps1
+```
+
+This registers the proxy as a Windows Task Scheduler job that:
+- Starts automatically at every Windows login
+- Runs silently in the background (no visible window)
+- Restarts itself automatically if it crashes
+- Logs output to C:\free-claude-desktop\proxy.log
+
+After this you never need to manually start the proxy again.
+
+You should see:
+```
+Service installed successfully!
+Task name : FreeClaudeDesktop
+Starts    : at every Windows login
+Proxy is up! Active provider: nvidia
+Admin UI: http://127.0.0.1:8082/admin
+```
 
 ### Step 7. Restart Claude Desktop
-Quit from the system tray (not just close the window), then reopen.
+Quit from the system tray (right-click tray icon -> Quit), then reopen.
 
 ### Step 8. Open the Admin UI
 In your browser: http://127.0.0.1:8082/admin
 
-Switch providers, edit models, test connections, and view the request log here.
+You will see provider cards. NVIDIA should be active (green border).
 
 ---
 
-## Verify It's Working
+## Part 2 — Daily Usage
 
-Type a message in Claude Desktop and watch the proxy window. A log line
-appears for each request:
-```
-[timestamp] -> nvidia | stepfun-ai/step-3.7-flash (stream)
-```
-That confirms traffic is flowing through the proxy.
+Open Claude Desktop and use it normally. The proxy is always running in the
+background. No manual steps needed.
+
+To switch providers: open http://127.0.0.1:8082/admin and click Use This
+on any provider card. The proxy verifies the provider works first, then
+switches instantly. No Claude Desktop restart needed.
+
+---
+
+## Switching Providers
+
+All switching happens in the Admin UI only.
+
+1. Open http://127.0.0.1:8082/admin
+2. Click Use This on any provider card
+3. A spinner appears while the provider is tested
+4. If the test passes, the switch happens instantly
+5. If it fails, you stay on the current provider and see the error
+
+Special providers:
+- NVIDIA NIM — orange NVIDIA card, fast cloud inference
+- Real Claude (Anthropic) — orange REAL CLAUDE badge, uses your ANTHROPIC_API_KEY
+- Ollama — local free models, no internet needed
 
 ---
 
 ## How to Validate Which Model is Running
 
-Use any of these methods to confirm exactly which model is handling your requests.
-
 ### Method 1 — Admin UI status bar (easiest)
 Open http://127.0.0.1:8082/admin
-
-The top status bar always shows:
+The top bar always shows:
 ```
 Active: nvidia  |  Model: stepfun-ai/step-3.7-flash
 ```
-This is live — it reflects the current active provider at all times.
 
-### Method 2 — Watch the proxy console window
-Send any message in Claude Desktop and look at the proxy window.
-Each request prints a log line:
-```
-[2026-05-31T10:23:11.000Z] -> nvidia | stepfun-ai/step-3.7-flash (stream)
-  tokens: 24 in / 87 out
-```
-Provider name and model are shown on every single request. This is the
-most reliable confirmation — it shows what actually handled the request,
-not what the model claims about itself.
-
-### Method 3 — Health check endpoint
-Run in PowerShell:
+### Method 2 — Health check
 ```powershell
 Invoke-RestMethod -Uri "http://127.0.0.1:8082/health"
 ```
-Returns:
+Returns active provider and port.
+
+### Method 3 — Request Log
+Open http://127.0.0.1:8082/admin -> Request Log tab.
+Every request logged with provider, model, tokens in/out, latency, status.
+
+### Method 4 — Proxy log file
+```powershell
+Get-Content C:\free-claude-desktop\proxy.log -Tail 20
 ```
-status : ok
-active : nvidia
-port   : 8082
+Each request prints a line like:
+```
+[2026-05-31T10:23:11Z] -> nvidia | stepfun-ai/step-3.7-flash (stream)
+  tokens: 24 in / 87 out
 ```
 
-### Method 4 — Request Log in Admin UI
-Go to http://127.0.0.1:8082/admin -> Request Log tab.
-Every request is logged with provider, model, tokens in/out, latency, and
-status. You can see exactly which model handled each message.
-
-### Method 5 — Ask in Claude Desktop chat
-Type "what model are you?" in Claude Desktop.
-NOTE: This is the LEAST reliable method. Models often report their
-training identity rather than the actual deployed model. For example,
-a model routed through the proxy may still say "I am Claude" out of
-habit even when it is running on NVIDIA. Always trust Methods 1-4 over
-this one.
-
-### Quick cheat sheet
+### Which method to use
 
 | What you want to know | Best method |
 |-----------------------|-------------|
-| What is active RIGHT NOW | Admin UI status bar or /health |
-| What handled the LAST message | Proxy console or Request Log |
-| Is the proxy running at all | /health endpoint |
-| Full request history | Request Log tab in Admin UI |
+| What is active right now | Admin UI status bar |
+| What handled the last message | Request Log or proxy.log |
+| Is the proxy running at all | Health check |
+| Full history | Request Log tab |
+
+Note: asking "what model are you?" in Claude Desktop chat is unreliable.
+Models often report their training identity rather than the actual model
+running. Always use the methods above instead.
 
 ---
 
-## Switching Back to Real Claude
+## Auto-Start Service Management
 
-When you want normal Anthropic Claude, run in Administrator PowerShell:
+### Check if service is running
 ```powershell
-[System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", $null, "Machine")
+Get-ScheduledTask -TaskName "FreeClaudeDesktop" | Select-Object TaskName, State
+Invoke-RestMethod -Uri "http://127.0.0.1:8082/health"
 ```
-Restart Claude Desktop. (You can leave the proxy off too.)
 
-To go back to the proxy later, re-run the Step 6 command.
+### Start service manually
+```powershell
+Start-ScheduledTask -TaskName "FreeClaudeDesktop"
+```
+
+### Stop service
+```powershell
+Stop-ScheduledTask -TaskName "FreeClaudeDesktop"
+```
+
+### View service logs
+```powershell
+Get-Content C:\free-claude-desktop\proxy.log -Tail 50
+```
+
+### Uninstall service (removes auto-start)
+```powershell
+.\uninstall-service.ps1
+```
 
 ---
 
-## Golden Rule
+## Billing
 
-The redirect (Step 6) and the running proxy (Step 5) must BOTH be active
-together. If the redirect is set but the proxy is not running, you get
-"We couldn't connect to Claude." Either start the proxy, or remove the redirect.
-
----
-
-## Optional — Cleaner Per-Session Switching
-
-Instead of the permanent Machine-level redirect, you can switch per launch:
-
-1. Remove the permanent redirect (Admin PowerShell, once):
-   ```powershell
-   [System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", $null, "Machine")
-   ```
-2. Use the proxy:  `.\launch-with-proxy.ps1`  (starts proxy if needed, opens Claude pointed at it)
-3. Use normal Claude:  `.\launch-normal.ps1`  (opens Claude with no redirect)
-
-Fully quit Claude from the tray before switching, since a running instance
-won't pick up the per-session variable.
+| Active Provider | What gets billed |
+|----------------|-----------------|
+| NVIDIA / Groq / Ollama / etc | That provider only. Zero Anthropic charges. |
+| Real Claude (Anthropic card) | Anthropic API credits (pay-per-token, not your subscription) |
 
 ---
 
@@ -202,27 +222,27 @@ won't pick up the per-session variable.
 
 | Problem | Fix |
 |---------|-----|
-| "We couldn't connect to Claude" | Proxy not running — do Step 5. Or remove redirect (switch-back command). |
-| EADDRINUSE :8082 | Another proxy already running. Find it: `netstat -ano \| findstr :8082`, then `Stop-Process -Id <PID> -Force` (use Admin PowerShell if access denied). |
-| Admin page blank / wrong UI | An old proxy is serving it. Kill it (above), start ours (Step 5), hard-refresh Ctrl+Shift+R. |
-| Build error about 'node' types | `npm install --save-dev @types/node` then `npx tsc`. |
-| Proxy window closes instantly | Run `node dist\index.js` directly to see the error. |
+| "We couldn't connect to Claude" | Proxy not running. Run install-service.ps1 to fix permanently, or start manually: node dist\index.js |
+| EADDRINUSE :8082 | Another proxy on port. `netstat -ano \| findstr :8082` then `Stop-Process -Id <PID> -Force` in Admin PowerShell |
+| Admin page blank or wrong UI | Wrong proxy serving it. Kill old one, start ours: node dist\index.js, then Ctrl+Shift+R in browser |
+| Provider switch fails | Check API key is set in .env and proxy has been restarted since |
+| Build error about node types | `npm install --save-dev @types/node` then `npx tsc` |
+| Service installed but proxy not starting | Check proxy.log for errors: `Get-Content C:\free-claude-desktop\proxy.log` |
 
 ---
 
-## Adding API Keys for Other Providers
+## Adding More Providers
 
-Edit `.env` and add any of:
-```
-NVIDIA_API_KEY=nvapi-...
-OPENAI_API_KEY=sk-...
-GROQ_API_KEY=gsk_...
-MISTRAL_API_KEY=...
-TOGETHER_API_KEY=...
-OPENROUTER_API_KEY=...
-```
-Get keys at: build.nvidia.com | platform.openai.com | console.groq.com |
-console.mistral.ai | api.together.xyz | openrouter.ai
+In Admin UI click + Add Provider and fill in:
+- Label: display name
+- Type: openai-compat for most APIs
+- Base URL: the API endpoint
+- Model: model identifier
+- API Key Env: name of the variable in your .env file
 
-Ollama runs locally with no key — install from https://ollama.com, then
-`ollama pull llama3.2`, and switch to the Ollama provider in the Admin UI.
+Get free API keys at:
+- NVIDIA: build.nvidia.com
+- Groq: console.groq.com
+- OpenRouter: openrouter.ai
+- Together: api.together.xyz
+- Ollama: ollama.com (local, no key needed)

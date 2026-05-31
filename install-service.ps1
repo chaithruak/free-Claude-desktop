@@ -15,7 +15,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 # Check project exists and is built
 if (-not (Test-Path "$proxyDir\dist\index.js")) {
-    Write-Host "ERROR: dist\index.js not found. Run 'npx tsc' in $proxyDir first." -ForegroundColor Red
+    Write-Host "ERROR: dist\index.js not found. Run npx tsc in $proxyDir first." -ForegroundColor Red
     exit 1
 }
 
@@ -25,7 +25,7 @@ Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Silent
 # Build the task
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-WindowStyle Hidden -File `"$startScript`" >> `"$logFile`" 2>&1" `
+    -Argument "-WindowStyle Hidden -File `"$startScript`"" `
     -WorkingDirectory $proxyDir
 
 $trigger = New-ScheduledTaskTrigger -AtLogon
@@ -47,7 +47,7 @@ Register-ScheduledTask `
     -Trigger $trigger `
     -Settings $settings `
     -Principal $principal `
-    -Description "Free Claude Desktop — LLM proxy auto-start" | Out-Null
+    -Description "Free Claude Desktop LLM proxy auto-start" | Out-Null
 
 Write-Host ""
 Write-Host "Service installed successfully!" -ForegroundColor Green
@@ -64,5 +64,5 @@ try {
     Write-Host "Proxy is up! Active provider: $($health.active)" -ForegroundColor Green
     Write-Host "Admin UI: http://127.0.0.1:8082/admin" -ForegroundColor Cyan
 } catch {
-    Write-Host "Proxy may still be starting. Check $logFile for status." -ForegroundColor Yellow
+    Write-Host "Proxy may still be starting. Check proxy.log for status." -ForegroundColor Yellow
 }
