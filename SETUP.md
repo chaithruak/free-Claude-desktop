@@ -231,7 +231,38 @@ Get-Content C:\free-claude-desktop\proxy.log -Tail 50
 
 ---
 
-## Adding More Providers
+## Adding and Updating API Keys
+
+API keys are now managed entirely in the Admin UI — no .env editing or
+proxy restarts needed.
+
+### How to add or update a key
+
+1. Open http://127.0.0.1:8082/admin
+2. Click Edit (pencil icon) on any provider card
+3. Paste your API key in the API Key field
+4. Click Save Key
+5. Done — takes effect immediately on the next request
+
+The key is stored in config.json (which is in .gitignore and never
+committed to git). The full key is never sent back to the browser —
+only the last 4 characters are shown as confirmation (e.g. ...oh5).
+
+### Key status indicators on provider cards
+
+- Green 🔑 ...oh5 — key saved in Admin UI (config.json)
+- Orange 🔑 .env — key loaded from .env file
+- Red ⚠ No key — no key set anywhere
+
+### To clear a saved key (revert to .env fallback)
+
+Open Edit on the provider, leave the key field blank, click Save Key.
+
+### .env file is still supported as fallback
+
+If you have keys in .env, they still work. The Admin UI key takes priority
+over the .env key when both are set. This means you can migrate keys to
+the UI gradually without breaking anything.
 
 In Admin UI click + Add Provider and fill in:
 - Label: display name

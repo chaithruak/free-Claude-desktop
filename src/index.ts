@@ -17,7 +17,8 @@ type ProviderType = "openai-compat" | "ollama" | "anthropic";
 interface Provider {
   type: ProviderType;
   baseUrl: string;
-  apiKeyEnv: string;   // env var name, e.g. "NVIDIA_API_KEY"
+  apiKeyEnv: string;   // env var name fallback, e.g. "NVIDIA_API_KEY"
+  apiKey?: string;     // actual key stored in config.json (takes priority over env var)
   model: string;
   label: string;       // display name in UI
   enabled: boolean;
@@ -134,6 +135,9 @@ function defaultConfig(): Config {
 }
 
 function resolveApiKey(provider: Provider): string {
+  // Config key takes priority — set via Admin UI, no restart needed
+  if (provider.apiKey && provider.apiKey.trim()) return provider.apiKey.trim();
+  // Fall back to env var (set in .env file)
   if (!provider.apiKeyEnv) return "";
   return process.env[provider.apiKeyEnv] || "";
 }
@@ -568,15 +572,21 @@ app.post("/v1/messages", async (req: Request, res: Response) => {
 
 // ─── Admin API ────────────────────────────────────────────────────────────────
 
-// Get full config (no API keys exposed)
+// Get full config (API keys never fully exposed — only last 4 chars shown)
 app.get("/admin/api/config", (_req, res) => {
   const cfg = loadConfig();
-  // Strip actual key values — only show if env var is set
   const safe = JSON.parse(JSON.stringify(cfg));
   for (const name of Object.keys(safe.providers)) {
     const p = safe.providers[name];
-    const keySet = !!(p.apiKeyEnv && process.env[p.apiKeyEnv]);
+    const resolvedKey = resolveApiKey(p);
+    const keySet = resolvedKey.length > 0;
+    const keySource = p.apiKey?.trim() ? "config" : (process.env[p.apiKeyEnv] ? "env" : "none");
+    const keyHint = keySet ? `...${resolvedKey.slice(-4)}` : "";
+    // Never send actual key to browser
+    delete p.apiKey;
     (p as any).apiKeySet = keySet;
+    (p as any).apiKeySource = keySource;  // "config" | "env" | "none"
+    (p as any).apiKeyHint = keyHint;      // last 4 chars e.g. "...oh5"
   }
   res.json(safe);
 });
@@ -632,14 +642,38 @@ app.post("/admin/api/switch-verified/:provider", async (req: Request, res: Respo
   }
 });
 
+// Save API key for a provider — stored in config.json, takes effect immediately
+app.post("/admin/api/provider/:name/key", (req: Request, res: Response) => {
+  const cfg = loadConfig();
+  const name = req.params.name;
+  const { apiKey } = req.body;
+
+  if (!cfg.providers[name]) {
+    return res.status(404).json({ error: `Provider "${name}" not found` });
+  }
+
+  if (apiKey === "" || apiKey === null) {
+    // Clear the stored key — will fall back to env var
+    delete cfg.providers[name].apiKey;
+    saveConfig(cfg);
+    console.log(`[ADMIN] Cleared stored key for: ${name}`);
+    return res.json({ ok: true, cleared: true });
+  }
+
+  cfg.providers[name].apiKey = apiKey.trim();
+  saveConfig(cfg);
+  const hint = `...${apiKey.trim().slice(-4)}`;
+  console.log(`[ADMIN] API key updated for: ${name} (${hint})`);
+  res.json({ ok: true, hint });
+});
+
 // Update provider config
 app.post("/admin/api/provider/:name", (req: Request, res: Response) => {
   const cfg = loadConfig();
   const name = req.params.name;
-  const { model, baseUrl, type, label, enabled, apiKeyEnv } = req.body;
+  const { model, baseUrl, type, label, enabled, apiKeyEnv, apiKey } = req.body;
 
   if (!cfg.providers[name]) {
-    // New provider
     cfg.providers[name] = { type, baseUrl, apiKeyEnv, model, label, enabled };
   } else {
     const p = cfg.providers[name];
@@ -649,10 +683,17 @@ app.post("/admin/api/provider/:name", (req: Request, res: Response) => {
     if (label !== undefined)     p.label = label;
     if (enabled !== undefined)   p.enabled = enabled;
     if (apiKeyEnv !== undefined) p.apiKeyEnv = apiKeyEnv;
+    // Only update stored key if explicitly provided and non-empty
+    if (apiKey !== undefined && apiKey !== "" && apiKey !== null) {
+      p.apiKey = apiKey.trim();
+    }
   }
 
   saveConfig(cfg);
-  res.json({ ok: true, provider: cfg.providers[name] });
+  // Return safe version — no key in response
+  const safe = { ...cfg.providers[name] } as any;
+  delete safe.apiKey;
+  res.json({ ok: true, provider: safe });
 });
 
 // Delete provider

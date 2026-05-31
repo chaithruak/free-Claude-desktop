@@ -142,6 +142,11 @@
   .ml-auto { margin-left: auto; }
   .mt-4 { margin-top: 16px; }
   .env-hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .key-input-row { display: flex; gap: 8px; align-items: center; }
+  .key-input-row .form-input { flex: 1; font-family: monospace; }
+  .key-saved { color: var(--accent2); font-size: 12px; font-weight: 600; }
+  .key-env { color: var(--warn); font-size: 12px; }
+  .key-none { color: var(--red); font-size: 12px; }
   .key-status { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px; }
   .key-set { background: rgba(34,197,94,0.15); color: var(--green); }
   .key-missing { background: rgba(239,68,68,0.15); color: var(--red); }
@@ -303,9 +308,17 @@ Claude Desktop → http://127.0.0.1:8082/v1/messages
     </div>
 
     <div class="form-row">
-      <label class="form-label">API Key Environment Variable <span id="keySetBadge"></span></label>
-      <input class="form-input" id="editApiKeyEnv" placeholder="e.g. NVIDIA_API_KEY">
-      <div class="env-hint">Set this variable in your .env file. Leave empty for local providers (Ollama).</div>
+      <label class="form-label">API Key <span id="keySetBadge"></span></label>
+      <div class="key-input-row">
+        <input class="form-input" type="password" id="editApiKey" placeholder="Paste your API key here (stored securely in config.json)">
+        <button class="btn btn-ghost btn-sm" onclick="toggleKeyVisibility()" id="btnShowKey">Show</button>
+        <button class="btn btn-success btn-sm" onclick="saveKeyOnly()" id="btnSaveKey">Save Key</button>
+      </div>
+      <div class="env-hint" id="keyHintText"></div>
+      <div class="env-hint" style="margin-top:6px">
+        Leave blank to use the environment variable instead (set in .env file).
+        Key is stored in config.json and never sent to the browser in full.
+      </div>
     </div>
 
     <div class="form-row flex items-center gap-10">
@@ -392,7 +405,12 @@ function renderProviders() {
         ${isAnthropic ? '<span style="font-size:10px;background:rgba(255,149,0,0.15);color:#ff9500;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700">REAL CLAUDE</span>' : ''}
       </div>
       <div class="provider-model">${p.model}</div>
-      <div class="provider-type">${p.type} ${p.apiKeySet !== undefined ? (p.apiKeySet ? '🔑 Key set' : '⚠️ No API key') : ''}</div>
+      <div class="provider-type">
+        ${p.type}
+        ${p.apiKeySource === 'config' ? '<span style="color:var(--accent2);font-size:11px">🔑 ' + p.apiKeyHint + '</span>'
+          : p.apiKeySource === 'env' ? '<span style="color:var(--warn);font-size:11px">🔑 .env</span>'
+          : p.type !== 'ollama' ? '<span style="color:var(--red);font-size:11px">⚠ No key</span>' : ''}
+      </div>
       <div class="provider-actions">
         ${!isActive
           ? `<button class="btn ${isAnthropic ? 'btn-primary' : 'btn-success'} btn-sm" onclick="switchVerified('${key}',event)">▶ Use This</button>`
@@ -448,8 +466,10 @@ function openAddProvider() {
   document.getElementById('editType').value = 'openai-compat';
   document.getElementById('editBaseUrl').value = '';
   document.getElementById('editModel').value = '';
-  document.getElementById('editApiKeyEnv').value = '';
+  document.getElementById('editApiKey').value = '';
   document.getElementById('editEnabled').checked = true;
+  document.getElementById('keySetBadge').innerHTML = '';
+  document.getElementById('keyHintText').textContent = '';
   document.getElementById('btnDelete').style.display = 'none';
   document.getElementById('validateResult').style.display = 'none';
   document.getElementById('keySetBadge').innerHTML = '';
@@ -467,15 +487,38 @@ function openEditProvider(key, e) {
   document.getElementById('editType').value = p.type;
   document.getElementById('editBaseUrl').value = p.baseUrl;
   document.getElementById('editModel').value = p.model;
-  document.getElementById('editApiKeyEnv').value = p.apiKeyEnv || '';
+  document.getElementById('editApiKey').value = '';  // never pre-fill key
   document.getElementById('editEnabled').checked = p.enabled !== false;
   document.getElementById('btnDelete').style.display = key === config.active ? 'none' : 'inline-flex';
   document.getElementById('validateResult').style.display = 'none';
-  const badge = p.apiKeySet
-    ? '<span class="key-status key-set">✓ Set</span>'
-    : (p.apiKeyEnv ? '<span class="key-status key-missing">✗ Not set</span>' : '');
+  // Show key status
+  let badge = '';
+  let hint = '';
+  if (p.apiKeySource === 'config') {
+    badge = '<span class="key-status key-set">✓ Saved in config ' + p.apiKeyHint + '</span>';
+    hint = 'Key saved in config.json ' + p.apiKeyHint + '. Paste a new key to replace it.';
+  } else if (p.apiKeySource === 'env') {
+    badge = '<span class="key-status" style="background:rgba(245,166,35,0.15);color:var(--warn)">⚠ From .env file ' + p.apiKeyHint + '</span>';
+    hint = 'Key loaded from .env file ' + p.apiKeyHint + '. Paste a key here to override it.';
+  } else {
+    badge = '<span class="key-status key-missing">✗ No key set</span>';
+    hint = 'No API key found. Paste your key above and click Save Key.';
+  }
   document.getElementById('keySetBadge').innerHTML = badge;
+  document.getElementById('keyHintText').textContent = hint;
   document.getElementById('providerModal').classList.add('open');
+}
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('editApiKey');
+  const btn = document.getElementById('btnShowKey');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    btn.textContent = 'Show';
+  }
 }
 
 function closeModal() {
@@ -483,11 +526,64 @@ function closeModal() {
 }
 
 // ─── Save provider ────────────────────────────────────────────────────────────
+function toggleKeyVisibility() {
+  const inp = document.getElementById('editApiKey');
+  const btn = document.getElementById('btnShowKey');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    inp.type = 'password';
+    btn.textContent = 'Show';
+  }
+}
+
+async function saveKeyOnly() {
+  const key = document.getElementById('editApiKey').value.trim();
+  const providerKey = document.getElementById('editProviderKey').value;
+  if (!providerKey) { toast('Save the provider first, then set the key', false); return; }
+
+  const btn = document.getElementById('btnSaveKey');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const r = await fetch('/admin/api/provider/' + providerKey + '/key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: key }),
+    });
+    const d = await r.json();
+    if (!d.ok) { toast(d.error || 'Save failed', false); return; }
+
+    document.getElementById('editApiKey').value = '';
+    document.getElementById('editApiKey').type = 'password';
+    document.getElementById('btnShowKey').textContent = 'Show';
+
+    if (d.cleared) {
+      toast('Key cleared — will use .env fallback');
+      document.getElementById('keySetBadge').innerHTML = '<span class="key-status key-missing">✗ No key set</span>';
+      document.getElementById('keyHintText').textContent = 'Key cleared. Will use .env file if available.';
+    } else {
+      toast('Key saved ' + d.hint);
+      document.getElementById('keySetBadge').innerHTML = '<span class="key-status key-set">✓ Saved in config ' + d.hint + '</span>';
+      document.getElementById('keyHintText').textContent = 'Key saved in config.json ' + d.hint;
+    }
+    await loadConfig();
+  } catch(e) {
+    toast('Save failed: ' + e.message, false);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Save Key';
+}
+
 async function saveProvider() {
   const existingKey = document.getElementById('editProviderKey').value;
   const newKey = document.getElementById('editKeyName').value.trim().toLowerCase().replace(/\s+/g,'_');
   if (!newKey) { toast('Provider ID required', false); return; }
 
+  const apiKeyVal = document.getElementById('editApiKey').value.trim();
   const payload = {
     label:     document.getElementById('editLabel').value,
     type:      document.getElementById('editType').value,
@@ -495,6 +591,7 @@ async function saveProvider() {
     model:     document.getElementById('editModel').value,
     apiKeyEnv: document.getElementById('editApiKeyEnv').value,
     enabled:   document.getElementById('editEnabled').checked,
+    ...(apiKeyVal && { apiKey: apiKeyVal }),
   };
 
   const key = existingKey || newKey;
@@ -615,11 +712,17 @@ function loadKeyStatus() {
   for (const [name, p] of Object.entries(config.providers)) {
     if (!p.apiKeyEnv || seen.has(p.apiKeyEnv)) continue;
     seen.add(p.apiKeyEnv);
-    const set = p.apiKeySet;
+    const src = p.apiKeySource;
+    const srcLabel = src === 'config' ? '✓ Saved in Admin UI ' + p.apiKeyHint
+                   : src === 'env'    ? '⚠ From .env ' + p.apiKeyHint
+                   :                   '✗ Not set';
+    const srcClass = src === 'config' ? 'key-status key-set'
+                   : src === 'env'    ? 'key-status' style="background:rgba(245,166,35,0.15);color:var(--warn)"
+                   :                   'key-status key-missing';
     html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <code style="color:var(--accent);font-size:13px;flex:1">${p.apiKeyEnv}</code>
-      <span class="${set ? 'key-status key-set' : 'key-status key-missing'}">${set ? '✓ Set' : '✗ Missing'}</span>
-      <span style="color:var(--muted);font-size:12px">${p.label}</span>
+      <span style="color:var(--text);font-size:13px;flex:1">${p.label}</span>
+      <span class="${srcClass}">${srcLabel}</span>
+      <button class="btn btn-ghost btn-sm" onclick="openEditProvider('${name}', event)">Set Key</button>
     </div>`;
   }
   list.innerHTML = html || '<div style="color:var(--muted)">No providers configured</div>';
