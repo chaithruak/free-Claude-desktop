@@ -98,6 +98,66 @@ That confirms traffic is flowing through the proxy.
 
 ---
 
+## How to Validate Which Model is Running
+
+Use any of these methods to confirm exactly which model is handling your requests.
+
+### Method 1 — Admin UI status bar (easiest)
+Open http://127.0.0.1:8082/admin
+
+The top status bar always shows:
+```
+Active: nvidia  |  Model: stepfun-ai/step-3.7-flash
+```
+This is live — it reflects the current active provider at all times.
+
+### Method 2 — Watch the proxy console window
+Send any message in Claude Desktop and look at the proxy window.
+Each request prints a log line:
+```
+[2026-05-31T10:23:11.000Z] -> nvidia | stepfun-ai/step-3.7-flash (stream)
+  tokens: 24 in / 87 out
+```
+Provider name and model are shown on every single request. This is the
+most reliable confirmation — it shows what actually handled the request,
+not what the model claims about itself.
+
+### Method 3 — Health check endpoint
+Run in PowerShell:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8082/health"
+```
+Returns:
+```
+status : ok
+active : nvidia
+port   : 8082
+```
+
+### Method 4 — Request Log in Admin UI
+Go to http://127.0.0.1:8082/admin -> Request Log tab.
+Every request is logged with provider, model, tokens in/out, latency, and
+status. You can see exactly which model handled each message.
+
+### Method 5 — Ask in Claude Desktop chat
+Type "what model are you?" in Claude Desktop.
+NOTE: This is the LEAST reliable method. Models often report their
+training identity rather than the actual deployed model. For example,
+a model routed through the proxy may still say "I am Claude" out of
+habit even when it is running on NVIDIA. Always trust Methods 1-4 over
+this one.
+
+### Quick cheat sheet
+
+| What you want to know | Best method |
+|-----------------------|-------------|
+| What is active RIGHT NOW | Admin UI status bar or /health |
+| What handled the LAST message | Proxy console or Request Log |
+| Is the proxy running at all | /health endpoint |
+| Full request history | Request Log tab in Admin UI |
+
+---
+
 ## Switching Back to Real Claude
 
 When you want normal Anthropic Claude, run in Administrator PowerShell:
