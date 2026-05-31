@@ -184,6 +184,12 @@ async function callOpenAICompat(provider: Provider, body: any) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
 
+  // OpenRouter requires these headers or some models return "No endpoints found"
+  if (provider.baseUrl.includes("openrouter.ai")) {
+    headers["HTTP-Referer"] = "http://127.0.0.1:8082";
+    headers["X-Title"] = "Free Claude Desktop";
+  }
+
   const r = await axios.post(
     `${provider.baseUrl}/chat/completions`,
     {
@@ -325,6 +331,12 @@ async function streamOpenAICompat(provider: Provider, body: any, res: Response):
   const apiKey = resolveApiKey(provider);
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+  // OpenRouter requires these headers
+  if (provider.baseUrl.includes("openrouter.ai")) {
+    headers["HTTP-Referer"] = "http://127.0.0.1:8082";
+    headers["X-Title"] = "Free Claude Desktop";
+  }
 
   const upstream = await axios.post(
     `${provider.baseUrl}/chat/completions`,

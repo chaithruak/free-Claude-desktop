@@ -578,7 +578,7 @@ async function saveKeyOnly() {
   btn.textContent = 'Save Key';
 }
 
-async function saveProvider() {
+async function saveProvider(silent = false) {
   const existingKey = document.getElementById('editProviderKey').value;
   const newKey = document.getElementById('editKeyName').value.trim().toLowerCase().replace(/\s+/g,'_');
   if (!newKey) { toast('Provider ID required', false); return; }
@@ -589,7 +589,7 @@ async function saveProvider() {
     type:      document.getElementById('editType').value,
     baseUrl:   document.getElementById('editBaseUrl').value,
     model:     document.getElementById('editModel').value,
-    apiKeyEnv: document.getElementById('editApiKeyEnv').value,
+    apiKeyEnv: '',
     enabled:   document.getElementById('editEnabled').checked,
     ...(apiKeyVal && { apiKey: apiKeyVal }),
   };
@@ -603,8 +603,10 @@ async function saveProvider() {
     });
     const d = await r.json();
     if (d.error) { toast(d.error, false); return; }
-    toast('Saved ✓');
-    closeModal();
+    if (!silent) {
+      toast('Saved ✓');
+      closeModal();
+    }
     await loadConfig();
   } catch(e) {
     toast('Save failed: ' + e.message, false);
@@ -635,8 +637,13 @@ async function validateProvider() {
   const btn = document.getElementById('btnValidate');
   const res = document.getElementById('validateResult');
   btn.disabled = true;
-  btn.textContent = 'Testing...';
+  btn.textContent = 'Saving...';
   res.style.display = 'none';
+
+  // Save current form state first so validation uses latest values
+  await saveProvider(true);
+
+  btn.textContent = 'Testing...';
 
   try {
     const r = await fetch('/admin/api/validate/' + key, { method: 'POST' });
