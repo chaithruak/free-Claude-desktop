@@ -47,6 +47,98 @@ Any OpenAI-compatible API also works — LM Studio, llama.cpp, LiteLLM, Jan, etc
 
 ---
 
+## Getting API Keys (First Time)
+
+You need at least one API key to get started. NVIDIA and OpenRouter both
+have generous free tiers — recommended for first-time users.
+
+---
+
+### NVIDIA NIM (Recommended — 40 requests/min free)
+
+NVIDIA gives you access to 100+ models including the fast `stepfun-ai/step-3.7-flash`.
+
+1. Go to https://build.nvidia.com
+2. Click **Sign In** (top right) → create a free account
+3. After login, click your profile icon (top right) → **API Keys**
+4. Click **Generate API Key**
+5. Copy the key — it starts with `nvapi-`
+
+In the Admin UI:
+- Click **✎ Edit** on the NVIDIA card
+- Paste the key in the **API Key** field
+- Click **Save Key**
+
+**Popular NVIDIA models to try:**
+```
+stepfun-ai/step-3.7-flash       ← fast, good quality (default)
+stepfun-ai/step-3.5-flash       ← faster, lighter
+meta/llama-3.3-70b-instruct     ← Meta's best open model
+nvidia/llama-3.1-nemotron-70b-instruct  ← NVIDIA optimized
+deepseek-ai/deepseek-v4-flash   ← great for coding
+```
+
+To change model: click **✎ Edit** on NVIDIA card → update the Model field → Save.
+
+---
+
+### OpenRouter (100s of models, generous free tier)
+
+OpenRouter gives access to models from many providers in one place, including
+free models with no credit card required.
+
+1. Go to https://openrouter.ai
+2. Click **Sign In** → create a free account
+3. Go to https://openrouter.ai/keys
+4. Click **Create Key**
+5. Give it a name (e.g. "free-claude-desktop") → **Create**
+6. Copy the key — it starts with `sk-or-`
+
+In the Admin UI:
+- Click **✎ Edit** on the OpenRouter card
+- Paste the key in the **API Key** field
+- Click **Save Key**
+
+**Free models to try on OpenRouter:**
+```
+deepseek/deepseek-r1-0528:free      ← strong reasoning, completely free
+meta-llama/llama-3.3-70b-instruct:free  ← Meta Llama, free tier
+mistralai/mistral-7b-instruct:free  ← fast and lightweight, free
+google/gemma-3-12b-it:free          ← Google Gemma, free
+```
+
+To use a free model: click **✎ Edit** on OpenRouter card → update the Model
+field to one of the above → Save.
+
+Note: free models on OpenRouter have rate limits. For heavier use, add
+OpenRouter credits at https://openrouter.ai/credits.
+
+---
+
+### Other Providers (Optional)
+
+| Provider | Sign Up | Key Format | Free Tier |
+|----------|---------|------------|-----------|
+| Groq | console.groq.com | `gsk_...` | Yes — very fast |
+| OpenAI | platform.openai.com | `sk-...` | No — pay per token |
+| Mistral | console.mistral.ai | random string | Limited trial |
+| Anthropic | console.anthropic.com | `sk-ant-...` | No — pay per token |
+| Ollama | ollama.com | No key needed | Free — runs locally |
+
+---
+
+### After adding a key
+
+1. Click **✎ Edit** on the provider card
+2. Paste key in the **API Key** field
+3. Click **Save Key** — takes effect immediately
+4. Click **▶ Use This** — proxy verifies the key works, then switches
+
+If the key is wrong or expired, the verify step will show the error
+and keep your current working provider active.
+
+---
+
 ## Setup (First Time)
 
 ### 1. Clone
