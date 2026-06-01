@@ -531,29 +531,38 @@ app.post("/v1/messages", async (req: Request, res: Response) => {
     return res.status(400).json({ type: "error", error: { message: `Provider "${providerName}" not configured` } });
   }
 
+  // For Anthropic — use the model Claude Desktop selected in its own UI
+  // For all other providers — use the model set in Admin UI config
+  const effectiveModel = provider.type === "anthropic" && req.body.model
+    ? req.body.model
+    : provider.model;
+
+  // Clone provider with effective model so all downstream calls use it
+  const activeProvider = { ...provider, model: effectiveModel };
+
   const start = Date.now();
-  console.log(`[${new Date().toISOString()}] → ${providerName} | ${provider.model}${req.body.stream ? " (stream)" : ""}`);
+  console.log(`[${new Date().toISOString()}] → ${providerName} | ${effectiveModel}${req.body.stream ? " (stream)" : ""}`);
 
   // Branch: streaming vs non-streaming
   if (req.body.stream) {
-    return handleStreaming(provider, providerName, req, res, cfg, start);
+    return handleStreaming(activeProvider, providerName, req, res, cfg, start);
   }
 
   try {
     let result: any;
-    switch (provider.type) {
-      case "openai-compat": result = await callOpenAICompat(provider, req.body); break;
-      case "ollama":        result = await callOllama(provider, req.body); break;
-      case "anthropic":     result = await callAnthropic(provider, req.body); break;
+    switch (activeProvider.type) {
+      case "openai-compat": result = await callOpenAICompat(activeProvider, req.body); break;
+      case "ollama":        result = await callOllama(activeProvider, req.body); break;
+      case "anthropic":     result = await callAnthropic(activeProvider, req.body); break;
       default:
-        return res.status(400).json({ type: "error", error: { message: `Unknown type: ${provider.type}` } });
+        return res.status(400).json({ type: "error", error: { message: `Unknown type: ${activeProvider.type}` } });
     }
 
     const latencyMs = Date.now() - start;
     const entry: LogEntry = {
       ts: new Date().toISOString(),
       provider: providerName,
-      model: provider.model,
+      model: effectiveModel,
       tokensIn: result.usage?.input_tokens ?? 0,
       tokensOut: result.usage?.output_tokens ?? 0,
       latencyMs,
@@ -569,7 +578,7 @@ app.post("/v1/messages", async (req: Request, res: Response) => {
     const entry: LogEntry = {
       ts: new Date().toISOString(),
       provider: providerName,
-      model: provider.model,
+      model: effectiveModel,
       tokensIn: 0,
       tokensOut: 0,
       latencyMs: Date.now() - start,

@@ -303,8 +303,9 @@ Claude Desktop → http://127.0.0.1:8082/v1/messages
     </div>
 
     <div class="form-row">
-      <label class="form-label">Model</label>
+      <label class="form-label">Model <span id="modelHint" style="color:var(--accent2);font-size:11px"></span></label>
       <input class="form-input" id="editModel" placeholder="e.g. stepfun-ai/step-3.7-flash">
+      <div class="env-hint" id="modelHintText"></div>
     </div>
 
     <div class="form-row">
@@ -404,7 +405,7 @@ function renderProviders() {
         ${p.label}
         ${isAnthropic ? '<span style="font-size:10px;background:rgba(255,149,0,0.15);color:#ff9500;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700">REAL CLAUDE</span>' : ''}
       </div>
-      <div class="provider-model">${p.model}</div>
+      <div class="provider-model">${p.type === 'anthropic' ? '⚡ Auto — uses model selected in Claude Desktop' : p.model}</div>
       <div class="provider-type" id="ptype-${key}">
         ${p.type} &nbsp;
         ${p.apiKeySource === 'config' ? '<span style="color:var(--accent2);font-size:11px">&#128273; ' + p.apiKeyHint + '</span>'
@@ -470,6 +471,8 @@ function openAddProvider() {
   document.getElementById('editEnabled').checked = true;
   document.getElementById('keySetBadge').innerHTML = '';
   document.getElementById('keyHintText').textContent = '';
+  document.getElementById('modelHint').textContent = '';
+  document.getElementById('modelHintText').textContent = '';
   document.getElementById('btnDelete').style.display = 'none';
   document.getElementById('validateResult').style.display = 'none';
   document.getElementById('keySetBadge').innerHTML = '';
@@ -487,6 +490,13 @@ function openEditProvider(key, e) {
   document.getElementById('editType').value = p.type;
   document.getElementById('editBaseUrl').value = p.baseUrl;
   document.getElementById('editModel').value = p.model;
+  // Show model hint for Anthropic — model is passed through from Claude Desktop
+  const isAnthropicProvider = p.type === 'anthropic';
+  document.getElementById('modelHint').textContent = isAnthropicProvider ? '(auto — set in Claude Desktop UI)' : '';
+  document.getElementById('modelHintText').textContent = isAnthropicProvider
+    ? 'For Anthropic, the model is selected in Claude Desktop model picker. The value here is only used for Test Connection.'
+    : '';
+
   document.getElementById('editApiKey').value = '';  // never pre-fill key
   document.getElementById('editEnabled').checked = p.enabled !== false;
   document.getElementById('btnDelete').style.display = key === config.active ? 'none' : 'inline-flex';
