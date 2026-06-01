@@ -3,273 +3,460 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM Proxy — Admin</title>
+<title>Free Claude Desktop</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
   :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: #2e3350;
-    --accent: #7c6aff;
-    --accent2: #00d4aa;
-    --danger: #ff4f6b;
-    --warn: #f5a623;
-    --text: #e8eaf6;
-    --muted: #6b7280;
-    --green: #22c55e;
-    --red: #ef4444;
+    --bg: #080c10;
+    --panel: #0d1117;
+    --card: #111820;
+    --card-hover: #161f2a;
+    --border: #1e2d3d;
+    --border-light: #243447;
+    --accent: #4f8ef7;
+    --accent-glow: rgba(79,142,247,0.15);
+    --accent2: #3dd68c;
+    --accent2-glow: rgba(61,214,140,0.12);
+    --orange: #f0883e;
+    --orange-glow: rgba(240,136,62,0.12);
+    --red: #f85149;
+    --red-glow: rgba(248,81,73,0.12);
+    --text: #cdd9e5;
+    --text-dim: #768390;
+    --text-bright: #e6edf3;
+    --mono: 'JetBrains Mono', monospace;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
-  a { color: var(--accent); text-decoration: none; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 13px; line-height: 1.5; min-height: 100vh; }
 
-  /* Layout */
-  .layout { display: flex; min-height: 100vh; }
-  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0; }
-  .main { flex: 1; padding: 28px 32px; overflow-y: auto; }
+  /* ── Layout ── */
+  .shell { display: grid; grid-template-columns: 200px 1fr; grid-template-rows: 52px 1fr; min-height: 100vh; }
 
-  /* Sidebar */
-  .logo { padding: 0 20px 24px; font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; }
-  .logo span { color: var(--muted); font-weight: 400; font-size: 12px; display: block; margin-top: 2px; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; color: var(--muted); transition: all 0.15s; border-left: 3px solid transparent; }
-  .nav-item:hover { background: var(--surface2); color: var(--text); }
-  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(124,106,255,0.08); }
-  .nav-icon { font-size: 16px; }
+  /* ── Top bar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+  }
+  .topbar-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px; color: var(--text-bright);
+    letter-spacing: -0.3px;
+  }
+  .topbar-logo svg { color: var(--accent); }
+  .topbar-tag {
+    font-size: 10px; font-weight: 500; color: var(--accent);
+    background: var(--accent-glow);
+    border: 1px solid rgba(79,142,247,0.25);
+    padding: 2px 7px; border-radius: 20px;
+    letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .topbar-status {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px 4px 8px;
+    font-size: 12px;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+    animation: breathe 2.5s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+  .status-pill-text { color: var(--text-dim); }
+  .status-pill-val { color: var(--text-bright); font-weight: 500; }
 
-  /* Status bar */
-  .status-bar { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; margin-bottom: 28px; }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-  .status-label { font-size: 12px; color: var(--muted); }
-  .status-value { font-weight: 600; color: var(--accent2); }
-  .status-sep { color: var(--border); }
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+  }
+  .nav-group { padding: 0 8px; margin-bottom: 4px; }
+  .nav-label {
+    font-size: 10px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    padding: 6px 10px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 6px;
+    cursor: pointer; color: var(--text-dim);
+    transition: all 0.12s; font-size: 13px; font-weight: 400;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--card); color: var(--text); }
+  .nav-item.active {
+    background: var(--accent-glow); color: var(--accent);
+    border-color: rgba(79,142,247,0.2); font-weight: 500;
+  }
+  .nav-icon { font-size: 14px; width: 16px; text-align: center; }
 
-  /* Page sections */
-  .section { display: none; }
-  .section.active { display: block; }
-  .page-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  .page-sub { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+  /* ── Main ── */
+  .main { padding: 24px 28px; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header { margin-bottom: 20px; }
+  .page-title { font-size: 18px; font-weight: 600; color: var(--text-bright); letter-spacing: -0.3px; }
+  .page-sub { color: var(--text-dim); font-size: 12px; margin-top: 3px; }
 
-  /* Cards */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-  .card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
+  /* ── Provider grid ── */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 18px; }
+  .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
 
-  /* Provider grid */
-  .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-  .provider-card { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 18px; cursor: pointer; transition: all 0.2s; position: relative; }
-  .provider-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-  .provider-card.active-provider { border-color: var(--accent2); background: rgba(0,212,170,0.05); }
-  .provider-card.active-provider::before { content: 'ACTIVE'; position: absolute; top: 12px; right: 12px; background: var(--accent2); color: #000; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px; }
-  .provider-card.disabled-provider { opacity: 0.5; }
-  .provider-card.anthropic-provider { border-color: rgba(255,149,0,0.4); }
-  .provider-card.anthropic-provider.active-provider { border-color: #ff9500; background: rgba(255,149,0,0.07); }
-  .provider-card.anthropic-provider.active-provider::before { background: #ff9500; }
-  .switching-overlay { display:none; position:absolute; inset:0; background:rgba(15,17,23,0.85); border-radius:10px; align-items:center; justify-content:center; flex-direction:column; gap:8px; z-index:10; }
-  .switching-overlay.show { display:flex; }
-  .spinner { width:22px; height:22px; border:2px solid var(--border); border-top-color:var(--accent2); border-radius:50%; animation:spin 0.7s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-  .provider-name { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
-  .provider-model { color: var(--muted); font-size: 12px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .provider-type { font-size: 11px; color: var(--accent); margin-top: 8px; }
-  .provider-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .provider-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    transition: border-color 0.15s, background 0.15s;
+    overflow: hidden;
+  }
+  .provider-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    transition: background 0.2s;
+  }
+  .provider-card:hover { border-color: var(--border-light); background: var(--card-hover); }
+  .provider-card.active-provider {
+    border-color: rgba(61,214,140,0.4);
+    background: linear-gradient(135deg, var(--card), rgba(61,214,140,0.04));
+  }
+  .provider-card.active-provider::before {
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+  }
+  .provider-card.anthropic-provider.active-provider {
+    border-color: rgba(240,136,62,0.4);
+    background: linear-gradient(135deg, var(--card), rgba(240,136,62,0.04));
+  }
+  .provider-card.anthropic-provider.active-provider::before {
+    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+  }
+  .provider-card.disabled-provider { opacity: 0.45; }
 
-  /* Buttons */
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .card-name { font-size: 14px; font-weight: 600; color: var(--text-bright); display: flex; align-items: center; gap: 7px; }
+  .card-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
+  }
+  .badge-active { background: rgba(61,214,140,0.15); color: var(--accent2); border: 1px solid rgba(61,214,140,0.3); }
+  .badge-claude { background: rgba(240,136,62,0.15); color: var(--orange); border: 1px solid rgba(240,136,62,0.3); }
+
+  .card-model {
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    margin-bottom: 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .card-type {
+    font-size: 10px; color: var(--text-dim);
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    padding: 1px 7px; border-radius: 4px; font-family: var(--mono);
+  }
+  .card-key-ok { font-size: 10px; color: var(--accent2); }
+  .card-key-env { font-size: 10px; color: var(--orange); }
+  .card-key-missing { font-size: 10px; color: var(--red); }
+
+  .card-actions { display: flex; gap: 7px; align-items: center; }
+
+  /* ── Switching overlay ── */
+  .switching-overlay {
+    display: none; position: absolute; inset: 0;
+    background: rgba(8,12,16,0.88);
+    border-radius: 9px;
+    align-items: center; justify-content: center; flex-direction: column; gap: 8px;
+    z-index: 10; backdrop-filter: blur(2px);
+  }
+  .switching-overlay.show { display: flex; }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border-light);
+    border-top-color: var(--accent2);
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay-text { font-size: 11px; color: var(--text-dim); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 13px; border-radius: 6px; border: none;
+    cursor: pointer; font-size: 12px; font-weight: 500;
+    font-family: inherit; transition: all 0.12s;
+    white-space: nowrap;
+  }
   .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #9080ff; }
-  .btn-success { background: var(--accent2); color: #000; }
-  .btn-success:hover { background: #00e8bb; }
-  .btn-danger { background: var(--danger); color: #fff; }
-  .btn-danger:hover { background: #ff6b84; }
-  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary:hover { background: #6ba3f9; }
+  .btn-success { background: var(--accent2); color: #000; font-weight: 600; }
+  .btn-success:hover { background: #5cebb0; }
+  .btn-ghost {
+    background: transparent; color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--border-light); color: var(--text); background: var(--card); }
+  .btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .btn-danger:hover { background: var(--red-glow); }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  /* Form */
-  .form-row { margin-bottom: 14px; }
-  .form-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; font-weight: 500; }
-  .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s; }
-  .form-input:focus { border-color: var(--accent); }
-  .form-select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 13px; outline: none; }
-  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-  /* Modal */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 100;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
   .modal-overlay.open { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
-  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
-  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border-light);
+    border-radius: 12px; padding: 24px;
+    width: 500px; max-width: 95vw; max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+  .modal-title { font-size: 16px; font-weight: 600; color: var(--text-bright); margin-bottom: 20px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
 
-  /* Log table */
-  .log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .log-table th { text-align: left; padding: 8px 12px; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
-  .log-table td { padding: 9px 12px; border-bottom: 1px solid rgba(46,51,80,0.5); }
-  .log-table tr:hover td { background: var(--surface2); }
-  .log-error td { color: var(--red); }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
-  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+  /* ── Form ── */
+  .form-row { margin-bottom: 14px; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-label { display: block; font-size: 11px; font-weight: 500; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-input, .form-select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 11px; color: var(--text-bright);
+    font-size: 13px; font-family: inherit; outline: none;
+    transition: border-color 0.12s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text-dim); }
+  .form-hint { font-size: 11px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; }
 
-  /* Stats */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-  .stat-value { font-size: 26px; font-weight: 700; color: var(--accent); }
-  .stat-label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  /* ── Key input ── */
+  .key-row { display: flex; gap: 6px; }
+  .key-row .form-input { flex: 1; font-family: var(--mono); font-size: 12px; }
+  .key-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; }
+  .key-badge-ok { background: rgba(61,214,140,0.12); color: var(--accent2); border: 1px solid rgba(61,214,140,0.25); }
+  .key-badge-env { background: rgba(240,136,62,0.12); color: var(--orange); border: 1px solid rgba(240,136,62,0.25); }
+  .key-badge-none { background: var(--red-glow); color: var(--red); border: 1px solid rgba(248,81,73,0.25); }
 
-  /* Toast */
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; z-index: 200; transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 320px; }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.toast-ok { border-color: var(--green); color: var(--green); }
-  .toast.toast-err { border-color: var(--red); color: var(--red); }
-
-  /* Validate result */
-  .validate-result { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
-  .validate-ok { background: rgba(34,197,94,0.1); border: 1px solid var(--green); color: var(--green); }
-  .validate-err { background: rgba(239,68,68,0.1); border: 1px solid var(--red); color: var(--red); }
-
-  /* Toggle */
-  .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+  /* ── Toggle ── */
+  .toggle-row { display: flex; align-items: center; gap: 10px; }
+  .toggle { position: relative; width: 36px; height: 20px; display: inline-block; }
   .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: 0.2s; }
-  .toggle-slider:before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--border-light); border-radius: 20px; cursor: pointer; transition: 0.2s; }
+  .toggle-slider:before { content:''; position:absolute; width:14px; height:14px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:0.2s; }
   input:checked + .toggle-slider { background: var(--accent2); }
-  input:checked + .toggle-slider:before { transform: translateX(18px); }
+  input:checked + .toggle-slider:before { transform:translateX(16px); }
 
-  .flex { display: flex; }
-  .items-center { align-items: center; }
-  .gap-10 { gap: 10px; }
-  .ml-auto { margin-left: auto; }
-  .mt-4 { margin-top: 16px; }
-  .env-hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
-  .key-input-row { display: flex; gap: 8px; align-items: center; }
-  .key-input-row .form-input { flex: 1; font-family: monospace; }
-  .key-saved { color: var(--accent2); font-size: 12px; font-weight: 600; }
-  .key-env { color: var(--warn); font-size: 12px; }
-  .key-none { color: var(--red); font-size: 12px; }
-  .key-status { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 8px; }
-  .key-set { background: rgba(34,197,94,0.15); color: var(--green); }
-  .key-missing { background: rgba(239,68,68,0.15); color: var(--red); }
-  .empty-log { text-align: center; color: var(--muted); padding: 40px; }
+  /* ── Validate result ── */
+  .validate-result { margin-top: 10px; padding: 9px 12px; border-radius: 6px; font-size: 12px; display: none; }
+  .validate-ok { background: rgba(61,214,140,0.08); border: 1px solid rgba(61,214,140,0.25); color: var(--accent2); }
+  .validate-err { background: var(--red-glow); border: 1px solid rgba(248,81,73,0.25); color: var(--red); }
+
+  /* ── Log table ── */
+  .log-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .log-table { width: 100%; border-collapse: collapse; }
+  .log-table th {
+    text-align: left; padding: 9px 14px;
+    background: var(--card); color: var(--text-dim);
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-table td { padding: 9px 14px; border-bottom: 1px solid rgba(30,45,61,0.6); font-size: 12px; }
+  .log-table tr:last-child td { border-bottom: none; }
+  .log-table tr:hover td { background: var(--card); }
+  .log-table .mono { font-family: var(--mono); font-size: 11px; }
+  .log-error td { color: var(--red); }
+  .pill { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .pill-ok { background: rgba(61,214,140,0.12); color: var(--accent2); }
+  .pill-err { background: var(--red-glow); color: var(--red); }
+  .log-empty { text-align: center; color: var(--text-dim); padding: 48px; }
+
+  /* ── Settings ── */
+  .settings-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+  .settings-title { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 14px; }
+  .code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 11px 14px; font-family: var(--mono); font-size: 12px; color: var(--accent2); line-height: 1.6; overflow-x: auto; }
+
+  /* ── Help ── */
+  .help-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+  .help-title { font-size: 12px; font-weight: 600; color: var(--text-bright); margin-bottom: 10px; }
+  .help-body { color: var(--text-dim); font-size: 12px; line-height: 1.8; }
+  .help-body code { font-family: var(--mono); color: var(--accent); background: rgba(79,142,247,0.08); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+  .flow { font-family: var(--mono); font-size: 11px; color: var(--text-dim); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; line-height: 2; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--panel); border: 1px solid var(--border-light);
+    border-radius: 8px; padding: 10px 16px; font-size: 12px;
+    z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    transform: translateY(60px); opacity: 0; transition: all 0.25s;
+    max-width: 300px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.ok { border-color: rgba(61,214,140,0.4); color: var(--accent2); }
+  .toast.err { border-color: rgba(248,81,73,0.4); color: var(--red); }
 </style>
 </head>
 <body>
+<div class="shell">
 
-<div class="layout">
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      Free Claude Desktop
+    </div>
+    <span class="topbar-tag">Proxy</span>
+    <div class="topbar-status">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span class="status-pill-text">Active:</span>
+        <span class="status-pill-val" id="statusProvider">—</span>
+      </div>
+      <div class="status-pill">
+        <span class="status-pill-text">Model:</span>
+        <span class="status-pill-val" id="statusModel" style="font-family:var(--mono);font-size:11px">—</span>
+      </div>
+    </div>
+  </header>
+
   <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="logo">⚡ LLM Proxy<span>Claude Desktop Router</span></div>
-    <div class="nav-item active" onclick="showSection('providers')"><span class="nav-icon">🔌</span> Providers</div>
-    <div class="nav-item" onclick="showSection('log')"><span class="nav-icon">📋</span> Request Log</div>
-    <div class="nav-item" onclick="showSection('settings')"><span class="nav-icon">⚙️</span> Settings</div>
-    <div class="nav-item" onclick="showSection('help')"><span class="nav-icon">📖</span> Help</div>
-  </div>
+  <nav class="sidebar">
+    <div class="nav-group">
+      <div class="nav-label">Routing</div>
+      <div class="nav-item active" onclick="showPage('providers', this)">
+        <span class="nav-icon">◈</span> Providers
+      </div>
+      <div class="nav-item" onclick="showPage('log', this)">
+        <span class="nav-icon">≡</span> Request Log
+      </div>
+    </div>
+    <div class="nav-group" style="margin-top:8px">
+      <div class="nav-label">System</div>
+      <div class="nav-item" onclick="showPage('settings', this)">
+        <span class="nav-icon">⊙</span> Settings
+      </div>
+      <div class="nav-item" onclick="showPage('help', this)">
+        <span class="nav-icon">?</span> Help
+      </div>
+    </div>
+  </nav>
 
   <!-- Main -->
-  <div class="main">
+  <main class="main">
 
-    <!-- Status bar -->
-    <div class="status-bar">
-      <div class="status-dot" id="statusDot"></div>
-      <span class="status-label">Active:</span>
-      <span class="status-value" id="statusProvider">—</span>
-      <span class="status-sep">|</span>
-      <span class="status-label">Model:</span>
-      <span class="status-value" id="statusModel">—</span>
-      <span class="ml-auto" style="font-size:12px;color:var(--muted)">Proxy: <code style="color:var(--accent2)">http://127.0.0.1:8082</code></span>
-    </div>
-
-    <!-- PROVIDERS -->
-    <div class="section active" id="section-providers">
-      <div class="page-title">Providers</div>
-      <div class="page-sub">Select and configure LLM providers. Click a card to edit. Green border = active.</div>
-      <div class="flex gap-10 mt-4" style="margin-bottom:20px">
+    <!-- Providers -->
+    <div class="page active" id="page-providers">
+      <div class="page-header">
+        <div class="page-title">Providers</div>
+        <div class="page-sub">Click Use This to switch. Provider is verified before switching.</div>
+      </div>
+      <div class="toolbar">
         <button class="btn btn-primary" onclick="openAddProvider()">+ Add Provider</button>
         <button class="btn btn-ghost" onclick="loadConfig()">↻ Refresh</button>
       </div>
       <div class="provider-grid" id="providerGrid">
-        <div style="color:var(--muted);padding:20px">Loading...</div>
+        <div style="color:var(--text-dim);padding:20px;font-size:12px">Loading...</div>
       </div>
     </div>
 
-    <!-- LOG -->
-    <div class="section" id="section-log">
-      <div class="page-title">Request Log</div>
-      <div class="page-sub">Last 100 requests routed through the proxy.</div>
-      <div class="flex gap-10" style="margin-bottom:16px">
+    <!-- Log -->
+    <div class="page" id="page-log">
+      <div class="page-header">
+        <div class="page-title">Request Log</div>
+        <div class="page-sub">Last 100 requests through the proxy.</div>
+      </div>
+      <div class="toolbar">
         <button class="btn btn-ghost" onclick="loadLog()">↻ Refresh</button>
-        <button class="btn btn-danger btn-sm" onclick="clearLog()">🗑 Clear Log</button>
+        <button class="btn btn-danger btn-sm" onclick="clearLog()">✕ Clear</button>
       </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <div id="logContainer"><div class="empty-log">No requests yet</div></div>
-      </div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div class="section" id="section-settings">
-      <div class="page-title">Settings</div>
-      <div class="page-sub">Configure proxy behavior and API keys.</div>
-      <div class="card">
-        <div class="card-title">API Keys</div>
-        <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
-          Keys are loaded from environment variables in your <code>.env</code> file. Edit <code>C:\free-claude-desktop\.env</code> to add keys, then restart the proxy.
-        </p>
-        <div id="keyStatusList">Loading...</div>
-      </div>
-      <div class="card">
-        <div class="card-title">Claude Desktop Setup</div>
-        <p style="color:var(--muted);font-size:13px;margin-bottom:12px">Make sure this environment variable is set (run as Administrator):</p>
-        <code style="display:block;background:var(--surface2);padding:12px;border-radius:8px;color:var(--accent2);font-size:13px">
-          [System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", "http://127.0.0.1:8082", "Machine")
-        </code>
-        <p style="color:var(--muted);font-size:12px;margin-top:8px">Then restart Claude Desktop.</p>
-      </div>
-      <div class="card">
-        <div class="card-title">Revert to Anthropic</div>
-        <p style="color:var(--muted);font-size:13px;margin-bottom:12px">To go back to real Claude / Sonnet:</p>
-        <code style="display:block;background:var(--surface2);padding:12px;border-radius:8px;color:var(--warn);font-size:13px">
-          [System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", $null, "Machine")
-        </code>
+      <div class="log-wrap">
+        <div id="logContainer"><div class="log-empty">No requests yet</div></div>
       </div>
     </div>
 
-    <!-- HELP -->
-    <div class="section" id="section-help">
-      <div class="page-title">Help</div>
-      <div class="page-sub">Quick reference guide.</div>
-      <div class="card">
-        <div class="card-title">How It Works</div>
-        <pre style="color:var(--muted);font-size:12px;line-height:1.7">
-Claude Desktop → http://127.0.0.1:8082/v1/messages
-                          ↓
-                    LLM Proxy (this)
-                          ↓
-        ┌─────────────────────────────────┐
-        │  NVIDIA  │ Ollama │ OpenAI │ ...│
-        └─────────────────────────────────┘</pre>
+    <!-- Settings -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <div class="page-sub">API keys and proxy configuration.</div>
       </div>
-      <div class="card">
-        <div class="card-title">Daily Usage</div>
-        <ol style="color:var(--muted);font-size:13px;line-height:2;padding-left:20px">
-          <li>Start proxy: <code style="color:var(--accent2)">.\start.ps1</code></li>
-          <li>Open Claude Desktop</li>
-          <li>Use this Admin UI to switch providers anytime</li>
-        </ol>
+      <div class="settings-card">
+        <div class="settings-title">API Key Status</div>
+        <div id="keyStatusList" style="color:var(--text-dim);font-size:12px">Loading...</div>
       </div>
-      <div class="card">
-        <div class="card-title">Adding API Keys</div>
-        <p style="color:var(--muted);font-size:13px;line-height:1.8">
-          Edit <code style="color:var(--accent)">C:\free-claude-desktop\.env</code> and add:<br><br>
-          <code style="color:var(--accent2)">NVIDIA_API_KEY=nvapi-your-key-here</code><br>
-          <code style="color:var(--accent2)">GROQ_API_KEY=gsk_your-key-here</code><br>
-          <code style="color:var(--accent2)">OPENAI_API_KEY=sk-your-key-here</code><br><br>
-          Get keys at: build.nvidia.com | console.groq.com | platform.openai.com
-        </p>
+      <div class="settings-card">
+        <div class="settings-title">Claude Desktop Redirect</div>
+        <p style="color:var(--text-dim);font-size:12px;margin-bottom:10px">Run once in Administrator PowerShell — tells Claude Desktop to route through this proxy:</p>
+        <div class="code-block">[System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", "http://127.0.0.1:8082", "Machine")</div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">Revert to Real Anthropic</div>
+        <p style="color:var(--text-dim);font-size:12px;margin-bottom:10px">Remove the redirect and restart Claude Desktop:</p>
+        <div class="code-block">[System.Environment]::SetEnvironmentVariable("ANTHROPIC_API_URL", $null, "Machine")</div>
+        <p style="color:var(--text-dim);font-size:12px;margin-top:8px">Or switch to the Real Claude (Anthropic) provider in the Providers tab — no env var change needed.</p>
       </div>
     </div>
 
-  </div><!-- /main -->
-</div><!-- /layout -->
+    <!-- Help -->
+    <div class="page" id="page-help">
+      <div class="page-header">
+        <div class="page-title">Help</div>
+        <div class="page-sub">Quick reference.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-title">How it works</div>
+        <div class="flow">
+Claude Desktop
+    ↓
+http://127.0.0.1:8082  (this proxy)
+    ↓
+Active Provider  →  NVIDIA / Groq / Ollama / Real Claude / ...
+        </div>
+      </div>
+      <div class="help-card">
+        <div class="help-title">Daily usage</div>
+        <div class="help-body">
+          Start the proxy: <code>.\start.ps1</code> or install the auto-start service once with <code>.\install-service.ps1</code>.<br>
+          Then open Claude Desktop normally. Switch providers anytime here — no restart needed.
+        </div>
+      </div>
+      <div class="help-card">
+        <div class="help-title">Validate which model is running</div>
+        <div class="help-body">
+          Check the status bar at the top of this page, or watch the proxy console window —
+          each request prints the provider and model. The Request Log tab also shows full history
+          with token counts and latency per request.
+        </div>
+      </div>
+      <div class="help-card">
+        <div class="help-title">Adding API keys</div>
+        <div class="help-body">
+          Click Edit on any provider → paste key in the API Key field → click Save Key.
+          Takes effect immediately on the next request. Key is stored in <code>config.json</code>
+          and never sent to the browser in full — only the last 4 characters are shown.
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- /shell -->
 
 <!-- Edit/Add Provider Modal -->
 <div class="modal-overlay" id="providerModal">
@@ -283,7 +470,7 @@ Claude Desktop → http://127.0.0.1:8082/v1/messages
         <input class="form-input" id="editLabel" placeholder="e.g. NVIDIA NIM">
       </div>
       <div class="form-row">
-        <label class="form-label">Provider ID (no spaces)</label>
+        <label class="form-label">Provider ID</label>
         <input class="form-input" id="editKeyName" placeholder="e.g. nvidia">
       </div>
     </div>
@@ -303,91 +490,82 @@ Claude Desktop → http://127.0.0.1:8082/v1/messages
     </div>
 
     <div class="form-row">
-      <label class="form-label">Model <span id="modelHint" style="color:var(--accent2);font-size:11px"></span></label>
-      <input class="form-input" id="editModel" placeholder="e.g. stepfun-ai/step-3.7-flash">
-      <div class="env-hint" id="modelHintText"></div>
+      <label class="form-label">Model <span id="modelHint" style="color:var(--accent2);font-size:10px;text-transform:none;letter-spacing:0;font-weight:400"></span></label>
+      <input class="form-input" id="editModel" placeholder="e.g. stepfun-ai/step-3.7-flash" style="font-family:var(--mono);font-size:12px">
+      <div class="form-hint" id="modelHintText"></div>
     </div>
 
     <div class="form-row">
       <label class="form-label">API Key <span id="keySetBadge"></span></label>
-      <div class="key-input-row">
-        <input class="form-input" type="password" id="editApiKey" placeholder="Paste your API key here (stored securely in config.json)">
+      <div class="key-row">
+        <input class="form-input" type="password" id="editApiKey" placeholder="Paste API key — stored in config.json, never committed to git">
         <button class="btn btn-ghost btn-sm" onclick="toggleKeyVisibility()" id="btnShowKey">Show</button>
         <button class="btn btn-success btn-sm" onclick="saveKeyOnly()" id="btnSaveKey">Save Key</button>
       </div>
-      <div class="env-hint" id="keyHintText"></div>
-      <div class="env-hint" style="margin-top:6px">
-        Leave blank to use the environment variable instead (set in .env file).
-        Key is stored in config.json and never sent to the browser in full.
-      </div>
+      <div class="form-hint" id="keyHintText"></div>
     </div>
 
-    <div class="form-row flex items-center gap-10">
-      <label class="toggle"><input type="checkbox" id="editEnabled" checked><span class="toggle-slider"></span></label>
-      <span style="font-size:13px;color:var(--muted)">Enabled</span>
+    <div class="form-row">
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="editEnabled" checked><span class="toggle-slider"></span></label>
+        <span style="font-size:12px;color:var(--text-dim)">Enabled</span>
+      </div>
     </div>
 
     <div class="validate-result" id="validateResult"></div>
 
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-ghost" id="btnValidate" onclick="validateProvider()">🔍 Test Connection</button>
       <button class="btn btn-danger btn-sm" id="btnDelete" onclick="deleteProvider()">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ghost" id="btnValidate" onclick="validateProvider()">Test Connection</button>
       <button class="btn btn-primary" onclick="saveProvider()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
 let config = null;
 
-// ─── Navigation ───────────────────────────────────────────────────────────────
-function showSection(name) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('section-' + name).classList.add('active');
-  event.currentTarget.classList.add('active');
+  document.getElementById('page-' + name).classList.add('active');
+  el.classList.add('active');
   if (name === 'log') loadLog();
   if (name === 'settings') loadKeyStatus();
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
 function toast(msg, ok = true) {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast show ' + (ok ? 'toast-ok' : 'toast-err');
+  t.className = 'toast show ' + (ok ? 'ok' : 'err');
   setTimeout(() => t.className = 'toast', 3000);
 }
 
-// ─── Load config ──────────────────────────────────────────────────────────────
 async function loadConfig() {
   try {
     const r = await fetch('/admin/api/config');
     config = await r.json();
     renderProviders();
-    updateStatusBar();
+    updateStatus();
   } catch(e) {
-    toast('Failed to load config: ' + e.message, false);
+    toast('Failed to load config', false);
   }
 }
 
-function updateStatusBar() {
+function updateStatus() {
   if (!config) return;
   const active = config.providers[config.active];
-  document.getElementById('statusProvider').textContent = config.active;
+  document.getElementById('statusProvider').textContent = config.active || '—';
   document.getElementById('statusModel').textContent = active?.model || '—';
 }
 
-// ─── Render providers ─────────────────────────────────────────────────────────
 function renderProviders() {
   const grid = document.getElementById('providerGrid');
-  const providers = config.providers;
   grid.innerHTML = '';
-
-  for (const [key, p] of Object.entries(providers)) {
+  for (const [key, p] of Object.entries(config.providers)) {
     const isActive = key === config.active;
     const isAnthropic = key === 'anthropic';
     const div = document.createElement('div');
@@ -396,45 +574,52 @@ function renderProviders() {
       + (isActive ? ' active-provider' : '')
       + (!p.enabled ? ' disabled-provider' : '')
       + (isAnthropic ? ' anthropic-provider' : '');
+
+    const keyIcon = p.apiKeySource === 'config'
+      ? '<span class="card-key-ok">● key ' + p.apiKeyHint + '</span>'
+      : p.apiKeySource === 'env'
+      ? '<span class="card-key-env">● .env</span>'
+      : p.type !== 'ollama' ? '<span class="card-key-missing">○ no key</span>' : '';
+
+    const activeBtn = isActive
+      ? '<span style="color:' + (isAnthropic ? 'var(--orange)' : 'var(--accent2)') + ';font-size:11px;font-weight:600">✓ Active</span>'
+      : '<button class="btn ' + (isAnthropic ? 'btn-primary' : 'btn-success') + ' btn-sm" onclick="switchVerified(\'' + key + '\',event)">Use This</button>';
+
     div.innerHTML = `
       <div class="switching-overlay" id="overlay-${key}">
         <div class="spinner"></div>
-        <span style="font-size:12px;color:var(--muted)">Verifying...</span>
+        <div class="overlay-text">Verifying...</div>
       </div>
-      <div class="provider-name">
-        ${p.label}
-        ${isAnthropic ? '<span style="font-size:10px;background:rgba(255,149,0,0.15);color:#ff9500;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:700">REAL CLAUDE</span>' : ''}
+      <div class="card-header">
+        <div class="card-name">
+          ${p.label}
+          ${isActive ? '<span class="card-badge ' + (isAnthropic ? 'badge-claude' : 'badge-active') + '">' + (isAnthropic ? 'Claude' : 'Active') + '</span>' : ''}
+          ${isAnthropic && !isActive ? '<span class="card-badge badge-claude">Real Claude</span>' : ''}
+        </div>
       </div>
-      <div class="provider-model">${p.type === 'anthropic' ? '⚡ Auto — uses model selected in Claude Desktop' : p.model}</div>
-      <div class="provider-type" id="ptype-${key}">
-        ${p.type} &nbsp;
-        ${p.apiKeySource === 'config' ? '<span style="color:var(--accent2);font-size:11px">&#128273; ' + p.apiKeyHint + '</span>'
-          : p.apiKeySource === 'env' ? '<span style="color:#f5a623;font-size:11px">&#128273; .env</span>'
-          : p.type !== 'ollama' ? '<span style="color:#ef4444;font-size:11px">&#9888; No key</span>' : ''}
+      <div class="card-model">${p.type === 'anthropic' ? '⚡ auto — uses Claude Desktop model picker' : p.model}</div>
+      <div class="card-meta">
+        <span class="card-type">${p.type}</span>
+        ${keyIcon}
       </div>
-      <div class="provider-actions">
-        ${!isActive
-          ? `<button class="btn ${isAnthropic ? 'btn-primary' : 'btn-success'} btn-sm" onclick="switchVerified('${key}',event)">▶ Use This</button>`
-          : `<span style="color:${isAnthropic ? '#ff9500' : 'var(--accent2)'};font-size:12px;font-weight:600">✓ Active</span>`}
-        <button class="btn btn-ghost btn-sm" onclick="openEditProvider('${key}',event)">✎ Edit</button>
+      <div class="card-actions">
+        ${activeBtn}
+        <button class="btn btn-ghost btn-sm" onclick="openEditProvider('${key}',event)">Edit</button>
       </div>
     `;
     grid.appendChild(div);
   }
 }
 
-// ─── Switch provider ──────────────────────────────────────────────────────────
 async function switchProvider(name, e) {
   e.stopPropagation();
   try {
     const r = await fetch('/admin/api/switch/' + name, { method: 'POST' });
     const d = await r.json();
     if (d.error) { toast(d.error, false); return; }
-    toast(`Switched to ${name} → ${d.model}`);
+    toast('Switched to ' + name);
     await loadConfig();
-  } catch(e) {
-    toast('Switch failed: ' + e.message, false);
-  }
+  } catch(e) { toast('Switch failed: ' + e.message, false); }
 }
 
 async function switchVerified(name, e) {
@@ -445,19 +630,14 @@ async function switchVerified(name, e) {
     const r = await fetch('/admin/api/switch-verified/' + name, { method: 'POST' });
     const d = await r.json();
     if (overlay) overlay.classList.remove('show');
-    if (d.ok) {
-      toast(`✓ Switched to ${name} → ${d.model}`);
-      await loadConfig();
-    } else {
-      toast(`✗ ${name} failed: ${d.error}`, false);
-    }
+    if (d.ok) { toast('Switched to ' + name + ' ✓'); await loadConfig(); }
+    else toast(name + ' failed: ' + d.error, false);
   } catch(err) {
     if (overlay) overlay.classList.remove('show');
     toast('Switch failed: ' + err.message, false);
   }
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
 function openAddProvider() {
   document.getElementById('modalTitle').textContent = 'Add Provider';
   document.getElementById('editProviderKey').value = '';
@@ -475,7 +655,6 @@ function openAddProvider() {
   document.getElementById('modelHintText').textContent = '';
   document.getElementById('btnDelete').style.display = 'none';
   document.getElementById('validateResult').style.display = 'none';
-  document.getElementById('keySetBadge').innerHTML = '';
   document.getElementById('providerModal').classList.add('open');
 }
 
@@ -490,28 +669,24 @@ function openEditProvider(key, e) {
   document.getElementById('editType').value = p.type;
   document.getElementById('editBaseUrl').value = p.baseUrl;
   document.getElementById('editModel').value = p.model;
-  // Show model hint for Anthropic — model is passed through from Claude Desktop
   const isAnthropicProvider = p.type === 'anthropic';
   document.getElementById('modelHint').textContent = isAnthropicProvider ? '(auto — set in Claude Desktop UI)' : '';
   document.getElementById('modelHintText').textContent = isAnthropicProvider
     ? 'For Anthropic, the model is selected in Claude Desktop model picker. The value here is only used for Test Connection.'
     : '';
-
-  document.getElementById('editApiKey').value = '';  // never pre-fill key
+  document.getElementById('editApiKey').value = '';
   document.getElementById('editEnabled').checked = p.enabled !== false;
   document.getElementById('btnDelete').style.display = key === config.active ? 'none' : 'inline-flex';
   document.getElementById('validateResult').style.display = 'none';
-  // Show key status
-  let badge = '';
-  let hint = '';
+  let badge = '', hint = '';
   if (p.apiKeySource === 'config') {
-    badge = '<span class="key-status key-set">✓ Saved in config ' + p.apiKeyHint + '</span>';
+    badge = '<span class="key-badge key-badge-ok">✓ saved ' + p.apiKeyHint + '</span>';
     hint = 'Key saved in config.json ' + p.apiKeyHint + '. Paste a new key to replace it.';
   } else if (p.apiKeySource === 'env') {
-    badge = '<span class="key-status" style="background:rgba(245,166,35,0.15);color:var(--warn)">⚠ From .env file ' + p.apiKeyHint + '</span>';
-    hint = 'Key loaded from .env file ' + p.apiKeyHint + '. Paste a key here to override it.';
+    badge = '<span class="key-badge key-badge-env">⚠ from .env ' + p.apiKeyHint + '</span>';
+    hint = 'Key loaded from .env file. Paste a key here to override it.';
   } else {
-    badge = '<span class="key-status key-missing">✗ No key set</span>';
+    badge = '<span class="key-badge key-badge-none">✗ not set</span>';
     hint = 'No API key found. Paste your key above and click Save Key.';
   }
   document.getElementById('keySetBadge').innerHTML = badge;
@@ -520,114 +695,76 @@ function openEditProvider(key, e) {
 }
 
 function toggleKeyVisibility() {
-  const input = document.getElementById('editApiKey');
+  const inp = document.getElementById('editApiKey');
   const btn = document.getElementById('btnShowKey');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = 'Hide';
-  } else {
-    input.type = 'password';
-    btn.textContent = 'Show';
-  }
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? 'Show' : 'Hide';
 }
 
 function closeModal() {
   document.getElementById('providerModal').classList.remove('open');
 }
 
-// ─── Save provider ────────────────────────────────────────────────────────────
-function toggleKeyVisibility() {
-  const inp = document.getElementById('editApiKey');
-  const btn = document.getElementById('btnShowKey');
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    btn.textContent = 'Hide';
-  } else {
-    inp.type = 'password';
-    btn.textContent = 'Show';
-  }
-}
-
 async function saveKeyOnly() {
   const key = document.getElementById('editApiKey').value.trim();
   const providerKey = document.getElementById('editProviderKey').value;
   if (!providerKey) { toast('Save the provider first, then set the key', false); return; }
-
   const btn = document.getElementById('btnSaveKey');
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-
+  btn.disabled = true; btn.textContent = 'Saving...';
   try {
     const r = await fetch('/admin/api/provider/' + providerKey + '/key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKey: key }),
     });
     const d = await r.json();
     if (!d.ok) { toast(d.error || 'Save failed', false); return; }
-
     document.getElementById('editApiKey').value = '';
     document.getElementById('editApiKey').type = 'password';
     document.getElementById('btnShowKey').textContent = 'Show';
-
     if (d.cleared) {
-      toast('Key cleared — will use .env fallback');
-      document.getElementById('keySetBadge').innerHTML = '<span class="key-status key-missing">✗ No key set</span>';
+      toast('Key cleared');
+      document.getElementById('keySetBadge').innerHTML = '<span class="key-badge key-badge-none">✗ not set</span>';
       document.getElementById('keyHintText').textContent = 'Key cleared. Will use .env file if available.';
     } else {
       toast('Key saved ' + d.hint);
-      document.getElementById('keySetBadge').innerHTML = '<span class="key-status key-set">✓ Saved in config ' + d.hint + '</span>';
+      document.getElementById('keySetBadge').innerHTML = '<span class="key-badge key-badge-ok">✓ saved ' + d.hint + '</span>';
       document.getElementById('keyHintText').textContent = 'Key saved in config.json ' + d.hint;
     }
     await loadConfig();
-  } catch(e) {
-    toast('Save failed: ' + e.message, false);
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'Save Key';
+  } catch(e) { toast('Save failed: ' + e.message, false); }
+  btn.disabled = false; btn.textContent = 'Save Key';
 }
 
 async function saveProvider(silent = false) {
   const existingKey = document.getElementById('editProviderKey').value;
   const newKey = document.getElementById('editKeyName').value.trim().toLowerCase().replace(/\s+/g,'_');
   if (!newKey) { toast('Provider ID required', false); return; }
-
   const apiKeyVal = document.getElementById('editApiKey').value.trim();
   const payload = {
-    label:     document.getElementById('editLabel').value,
-    type:      document.getElementById('editType').value,
-    baseUrl:   document.getElementById('editBaseUrl').value,
-    model:     document.getElementById('editModel').value,
+    label: document.getElementById('editLabel').value,
+    type: document.getElementById('editType').value,
+    baseUrl: document.getElementById('editBaseUrl').value,
+    model: document.getElementById('editModel').value,
     apiKeyEnv: '',
-    enabled:   document.getElementById('editEnabled').checked,
+    enabled: document.getElementById('editEnabled').checked,
     ...(apiKeyVal && { apiKey: apiKeyVal }),
   };
-
   const key = existingKey || newKey;
   try {
     const r = await fetch('/admin/api/provider/' + key, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     const d = await r.json();
     if (d.error) { toast(d.error, false); return; }
-    if (!silent) {
-      toast('Saved ✓');
-      closeModal();
-    }
+    if (!silent) { toast('Saved'); closeModal(); }
     await loadConfig();
-  } catch(e) {
-    toast('Save failed: ' + e.message, false);
-  }
+  } catch(e) { toast('Save failed: ' + e.message, false); }
 }
 
-// ─── Delete provider ──────────────────────────────────────────────────────────
 async function deleteProvider() {
   const key = document.getElementById('editProviderKey').value;
-  if (!key) return;
-  if (!confirm(`Delete provider "${key}"?`)) return;
+  if (!key || !confirm('Delete provider "' + key + '"?')) return;
   try {
     const r = await fetch('/admin/api/provider/' + key, { method: 'DELETE' });
     const d = await r.json();
@@ -635,82 +772,52 @@ async function deleteProvider() {
     toast('Deleted');
     closeModal();
     await loadConfig();
-  } catch(e) {
-    toast('Delete failed: ' + e.message, false);
-  }
+  } catch(e) { toast('Delete failed: ' + e.message, false); }
 }
 
-// ─── Validate provider ────────────────────────────────────────────────────────
 async function validateProvider() {
   const key = document.getElementById('editProviderKey').value || document.getElementById('editKeyName').value;
-  if (!key) { toast('Save provider first, then validate', false); return; }
+  if (!key) { toast('Save provider first, then test', false); return; }
   const btn = document.getElementById('btnValidate');
   const res = document.getElementById('validateResult');
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.disabled = true; btn.textContent = 'Saving...';
   res.style.display = 'none';
-
-  // Save current form state first so validation uses latest values
   await saveProvider(true);
-
   btn.textContent = 'Testing...';
-
   try {
     const r = await fetch('/admin/api/validate/' + key, { method: 'POST' });
     const d = await r.json();
     res.style.display = 'block';
     if (d.ok) {
       res.className = 'validate-result validate-ok';
-      res.textContent = `✓ Connection OK — model: ${d.model} — reply: "${d.reply}"`;
+      res.textContent = 'Connection OK — model: ' + d.model + ' — reply: "' + d.reply + '"';
     } else {
       res.className = 'validate-result validate-err';
-      res.textContent = `✗ Error: ${d.error}`;
+      res.textContent = 'Error: ' + d.error;
     }
   } catch(e) {
     res.style.display = 'block';
     res.className = 'validate-result validate-err';
-    res.textContent = `✗ Request failed: ${e.message}`;
+    res.textContent = 'Request failed: ' + e.message;
   }
-
-  btn.disabled = false;
-  btn.textContent = '🔍 Test Connection';
+  btn.disabled = false; btn.textContent = 'Test Connection';
 }
 
-// ─── Log ──────────────────────────────────────────────────────────────────────
 async function loadLog() {
   try {
     const r = await fetch('/admin/api/log');
     const log = await r.json();
-    const container = document.getElementById('logContainer');
-    if (!log.length) {
-      container.innerHTML = '<div class="empty-log">No requests yet</div>';
-      return;
-    }
-    let html = `<table class="log-table">
-      <thead><tr>
-        <th>Time</th><th>Provider</th><th>Model</th>
-        <th>In</th><th>Out</th><th>Latency</th><th>Status</th>
-      </tr></thead><tbody>`;
+    const c = document.getElementById('logContainer');
+    if (!log.length) { c.innerHTML = '<div class="log-empty">No requests yet</div>'; return; }
+    let html = '<table class="log-table"><thead><tr><th>Time</th><th>Provider</th><th>Model</th><th>In</th><th>Out</th><th>Latency</th><th>Status</th></tr></thead><tbody>';
     for (const e of log) {
       const t = new Date(e.ts).toLocaleTimeString();
-      const status = e.error
-        ? `<span class="badge badge-red">ERR</span>`
-        : `<span class="badge badge-green">OK</span>`;
-      html += `<tr class="${e.error ? 'log-error' : ''}">
-        <td>${t}</td>
-        <td>${e.provider}</td>
-        <td style="font-family:monospace;font-size:11px">${e.model}</td>
-        <td>${e.tokensIn}</td>
-        <td>${e.tokensOut}</td>
-        <td>${e.latencyMs}ms</td>
-        <td>${status}</td>
-      </tr>`;
+      const st = e.error ? '<span class="pill pill-err">ERR</span>' : '<span class="pill pill-ok">OK</span>';
+      html += '<tr class="' + (e.error ? 'log-error' : '') + '"><td>' + t + '</td><td>' + e.provider + '</td><td class="mono">' + e.model + '</td><td>' + e.tokensIn + '</td><td>' + e.tokensOut + '</td><td>' + e.latencyMs + 'ms</td><td>' + st + '</td></tr>';
     }
     html += '</tbody></table>';
-    container.innerHTML = html;
-  } catch(e) {
-    toast('Log load failed: ' + e.message, false);
-  }
+    c.innerHTML = html;
+  } catch(e) { toast('Log load failed', false); }
 }
 
 async function clearLog() {
@@ -720,41 +827,29 @@ async function clearLog() {
   loadLog();
 }
 
-// ─── Key status ───────────────────────────────────────────────────────────────
 function loadKeyStatus() {
   if (!config) { loadConfig().then(loadKeyStatus); return; }
   const list = document.getElementById('keyStatusList');
-  const seen = new Set();
   let html = '';
   for (const [name, p] of Object.entries(config.providers)) {
-    if (!p.apiKeyEnv || seen.has(p.apiKeyEnv)) continue;
-    seen.add(p.apiKeyEnv);
     const src = p.apiKeySource;
-    const srcLabel = src === 'config' ? '✓ Saved in Admin UI ' + p.apiKeyHint
-                   : src === 'env'    ? '⚠ From .env ' + p.apiKeyHint
-                   :                   '✗ Not set';
-    const srcStyle = src === 'config'
-      ? 'background:rgba(34,197,94,0.15);color:#22c55e'
-      : src === 'env'
-      ? 'background:rgba(245,166,35,0.15);color:#f5a623'
-      : 'background:rgba(239,68,68,0.15);color:#ef4444';
-    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
-          + '<span style="color:var(--text);font-size:13px;flex:1">' + p.label + '</span>'
-          + '<span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;' + srcStyle + '">' + srcLabel + '</span>'
-          + '<button class="btn btn-ghost btn-sm" onclick="openEditProvider(\'' + name + '\', event)">Set Key</button>'
-          + '</div>';
+    const srcLabel = src === 'config' ? '✓ saved ' + p.apiKeyHint : src === 'env' ? '⚠ from .env ' + p.apiKeyHint : '✗ not set';
+    const cls = src === 'config' ? 'key-badge-ok' : src === 'env' ? 'key-badge-env' : 'key-badge-none';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">'
+      + '<span style="flex:1;color:var(--text);font-size:12px">' + p.label + '</span>'
+      + '<span class="key-badge ' + cls + '">' + srcLabel + '</span>'
+      + '<button class="btn btn-ghost btn-sm" onclick="openEditProvider(\'' + name + '\', event)">Set Key</button>'
+      + '</div>';
   }
-  list.innerHTML = html || '<div style="color:var(--muted)">No providers configured</div>';
+  list.innerHTML = html || '<div style="color:var(--text-dim)">No providers</div>';
 }
 
-// ─── Close modal on overlay click ─────────────────────────────────────────────
 document.getElementById('providerModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
 loadConfig();
-setInterval(loadConfig, 30000); // refresh every 30s
+setInterval(loadConfig, 30000);
 </script>
 </body>
 </html>
